@@ -65,7 +65,7 @@ def test_subprocess_no_window_kwargs_hides_windows_console(monkeypatch):
 def test_resolve_upsc_path_prefers_bundled_client(monkeypatch, tmp_path):
     exe = tmp_path / "BatteryPowerManager.exe"
     exe.write_text("", encoding="utf-8")
-    bundled = tmp_path / "nut" / "x86_64-w64-mingw32-nut-server" / "bin" / "upsc.exe"
+    bundled = tmp_path / "nut" / "mingw64" / "bin" / "upsc.exe"
     bundled.parent.mkdir(parents=True)
     bundled.write_text("", encoding="utf-8")
     monkeypatch.setattr("ecoflow_tray.adapters.nut.sys.executable", str(exe))
