@@ -28,6 +28,15 @@ Section "Install"
   WriteRegStr HKLM "Software\${COMPANY}\${APPNAME}" "InstallDir" "$INSTDIR"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Run" "BatteryPowerManager" '"$INSTDIR\BatteryPowerManager.exe" --tray'
 
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\BatteryPowerManager" "DisplayName" "${APPNAME}"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\BatteryPowerManager" "DisplayVersion" "${VERSION}"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\BatteryPowerManager" "Publisher" "${COMPANY}"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\BatteryPowerManager" "InstallLocation" "$INSTDIR"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\BatteryPowerManager" "DisplayIcon" "$INSTDIR\battery_power_manager.ico"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\BatteryPowerManager" "UninstallString" '"$INSTDIR\Uninstall.exe"'
+  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\BatteryPowerManager" "NoModify" 1
+  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\BatteryPowerManager" "NoRepair" 1
+
   CreateDirectory "$SMPROGRAMS\Battery Power Manager"
   CreateShortcut "$SMPROGRAMS\Battery Power Manager\Start Battery Power Manager.lnk" "$INSTDIR\BatteryPowerManager.exe" "--tray" "$INSTDIR\battery_power_manager.ico" 0
   CreateShortcut "$SMPROGRAMS\Battery Power Manager\Battery Power Manager Details.lnk" "$INSTDIR\BatteryPowerManager.exe" "--detail-window" "$INSTDIR\battery_power_manager.ico" 0
@@ -44,6 +53,7 @@ Section "Uninstall"
   SetRegView 64
   SetShellVarContext all
   DeleteRegValue HKLM "Software\Microsoft\Windows\CurrentVersion\Run" "BatteryPowerManager"
+  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\BatteryPowerManager"
   DeleteRegKey HKLM "Software\${COMPANY}\${APPNAME}"
   Delete "$DESKTOP\Start Battery Power Manager.lnk"
   Delete "$DESKTOP\Battery Power Manager Details.lnk"
