@@ -37,22 +37,27 @@ jobs:
       - name: Download NUT for Windows
         shell: pwsh
         run: |
-          $nutVersion = "2.8.2"
-          $url = "https://github.com/networkupstools/nut/releases/download/v${nutVersion}/nut-${nutVersion}-Windows-x86_64.zip"
-          Write-Host "Downloading NUT $nutVersion..."
-          Invoke-WebRequest $url -OutFile nut-windows.zip
-          Expand-Archive nut-windows.zip -DestinationPath nut -Force
-          # Make sure EcoFlow config files are in place
+          $url = "https://github.com/networkupstools/nut/releases/download/v2.8.5/NUT-for-Windows-x86_64-RELEASE-2.8.5-1-fixNSS.7z"
+          Write-Host "Downloading NUT for Windows 2.8.5..."
+          Invoke-WebRequest $url -OutFile nut-windows.7z
+          # 7-Zip is pre-installed on GitHub Windows runners
+          & "C:\Program Files\7-Zip\7z.exe" x nut-windows.7z -onut-extracted -y | Out-Null
+          # Find the server directory and restructure to expected layout
+          $serverDir = Get-ChildItem -Recurse -Directory -Filter "x86_64-w64-mingw32-nut-server" -Path nut-extracted | Select-Object -First 1
+          if (-not $serverDir) { throw "x86_64-w64-mingw32-nut-server not found in archive" }
+          $nutRoot = $serverDir.Parent.FullName
+          New-Item -ItemType Directory -Force -Path "nut" | Out-Null
+          Copy-Item -Recurse -Force "$nutRoot\*" "nut\"
+          Write-Host "NUT structure:"
+          Get-ChildItem nut -Recurse -Depth 2 | Select-Object FullName | Select-Object -First 20
+          # Copy EcoFlow config into etc/
           $etcDir = "nut\etc"
           New-Item -ItemType Directory -Force -Path $etcDir | Out-Null
-          if (-not (Test-Path "$etcDir\ups.conf")) {
-            Copy-Item "installer\nut-config\ups.conf" "$etcDir\" -ErrorAction SilentlyContinue
-          }
-          if (-not (Test-Path "$etcDir\upsd.conf")) {
-            Copy-Item "installer\nut-config\upsd.conf" "$etcDir\" -ErrorAction SilentlyContinue
-          }
-          if (-not (Test-Path "$etcDir\upsd.users")) {
-            Copy-Item "installer\nut-config\upsd.users" "$etcDir\" -ErrorAction SilentlyContinue
+          foreach ($f in @("ups.conf","upsd.conf","upsd.users")) {
+            $src = "installer\nut-config\$f"
+            if ((Test-Path $src) -and (-not (Test-Path "$etcDir\$f"))) {
+              Copy-Item $src "$etcDir\"
+            }
           }
 
       - name: Build
