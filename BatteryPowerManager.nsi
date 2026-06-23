@@ -1,6 +1,6 @@
 !define APPNAME "Battery Power Manager"
 !define COMPANY "Devon Systems"
-!define VERSION "0.1.0"
+!define VERSION "0.2.0"
 
 Name "${APPNAME}"
 OutFile "dist\BatteryPowerManagerSetup.exe"
@@ -22,10 +22,13 @@ Section "Install"
   RMDir /r "$INSTDIR"
   SetOutPath "$INSTDIR"
   File /r "dist\self-contained-installer\BatteryPowerManager\*"
+  File /r "dist\self-contained-installer\nut"
   File "dist\self-contained-installer\battery_power_manager.ico"
   File "dist\self-contained-installer\battery_power_manager.png"
+  File "installer\Start-BatteryBackend.ps1"
 
   WriteRegStr HKLM "Software\${COMPANY}\${APPNAME}" "InstallDir" "$INSTDIR"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Run" "BatteryPowerManagerBackend" 'powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "$INSTDIR\Start-BatteryBackend.ps1"'
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Run" "BatteryPowerManager" '"$INSTDIR\BatteryPowerManager.exe" --tray'
 
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\BatteryPowerManager" "DisplayName" "${APPNAME}"
@@ -46,12 +49,15 @@ Section "Install"
 
   WriteUninstaller "$INSTDIR\Uninstall.exe"
 
+  ExecShell "open" "powershell.exe" '-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "$INSTDIR\Start-BatteryBackend.ps1"'
+  Sleep 3000
   ExecShell "open" "$INSTDIR\BatteryPowerManager.exe" "--tray"
 SectionEnd
 
 Section "Uninstall"
   SetRegView 64
   SetShellVarContext all
+  DeleteRegValue HKLM "Software\Microsoft\Windows\CurrentVersion\Run" "BatteryPowerManagerBackend"
   DeleteRegValue HKLM "Software\Microsoft\Windows\CurrentVersion\Run" "BatteryPowerManager"
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\BatteryPowerManager"
   DeleteRegKey HKLM "Software\${COMPANY}\${APPNAME}"

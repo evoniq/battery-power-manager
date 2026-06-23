@@ -1,4 +1,4 @@
-from ecoflow_tray.adapters.nut import _parse_upsc, _subprocess_no_window_kwargs, _telemetry_from_nut
+from ecoflow_tray.adapters.nut import _parse_upsc, _resolve_upsc_path, _subprocess_no_window_kwargs, _telemetry_from_nut
 
 
 def test_parse_upsc_key_value_output():
@@ -60,3 +60,18 @@ def test_subprocess_no_window_kwargs_hides_windows_console(monkeypatch):
     assert kwargs["creationflags"] == 0x08000000
     assert kwargs["startupinfo"].dwFlags == 1
     assert kwargs["startupinfo"].wShowWindow == 0
+
+
+def test_resolve_upsc_path_prefers_bundled_client(monkeypatch, tmp_path):
+    exe = tmp_path / "BatteryPowerManager.exe"
+    exe.write_text("", encoding="utf-8")
+    bundled = tmp_path / "nut" / "x86_64-w64-mingw32-nut-server" / "bin" / "upsc.exe"
+    bundled.parent.mkdir(parents=True)
+    bundled.write_text("", encoding="utf-8")
+    monkeypatch.setattr("ecoflow_tray.adapters.nut.sys.executable", str(exe))
+
+    assert _resolve_upsc_path("upsc") == str(bundled)
+
+
+def test_resolve_upsc_path_keeps_explicit_override():
+    assert _resolve_upsc_path("C:/custom/upsc.exe") == "C:/custom/upsc.exe"

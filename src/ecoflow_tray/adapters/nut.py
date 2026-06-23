@@ -1,4 +1,5 @@
 from __future__ import annotations
+from pathlib import Path
 import subprocess
 import sys
 from ecoflow_tray.telemetry import Telemetry, now_utc
@@ -22,7 +23,7 @@ def _subprocess_no_window_kwargs() -> dict[str, int]:
 
 class NutAdapter:
     def __init__(self, upsc_path: str = "upsc", device: str = "nutdev1@127.0.0.1", timeout: float = 5.0):
-        self.upsc_path = upsc_path
+        self.upsc_path = _resolve_upsc_path(upsc_path)
         self.device = device
         self.timeout = timeout
 
@@ -41,6 +42,17 @@ class NutAdapter:
             return Telemetry(source="nut", connected=False, status="error", raw={"stderr": proc.stderr.strip(), "stdout": proc.stdout.strip()}, updated_at=now_utc())
         data = _parse_upsc(proc.stdout)
         return _telemetry_from_nut(data)
+
+
+def _resolve_upsc_path(upsc_path: str) -> str:
+    """Prefer bundled NUT client when installed next to the frozen app."""
+    if upsc_path != "upsc":
+        return upsc_path
+    executable_dir = Path(sys.executable).resolve().parent
+    bundled = executable_dir / "nut" / "x86_64-w64-mingw32-nut-server" / "bin" / "upsc.exe"
+    if bundled.exists():
+        return str(bundled)
+    return upsc_path
 
 
 def _parse_upsc(text: str) -> dict[str, str]:
