@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="120" viewBox="0 0 360 120">
+  <rect width="360" height="120" fill="none"/>
+  <g transform="translate(0,8)">
+    <path d="M8 92 C8 50 8 28 8 16 C8 7 14 2 23 2 C31 2 37 7 38 16 L38 82 C38 88 41 91 45 91 C49 91 52 88 52 82 L52 16 C52 7 58 2 67 2 C76 2 82 7 82 16 L82 82 C82 88 85 91 89 91 C93 91 96 88 96 82 L96 16 C96 7 102 2 111 2 C120 2 126 7 126 16 L126 82 C126 88 129 91 133 91 C137 91 140 88 140 82 L140 16 C140 7 146 2 155 2 C164 2 170 7 170 16 L170 104 L154 104 L154 20 C154 17 152 15 150 15 C147 15 145 17 145 20 L145 82 C145 96 136 106 123 106 C110 106 101 96 101 82 L101 20 C101 17 99 15 96 15 C94 15 92 17 92 20 L92 82 C92 96 83 106 70 106 C57 106 48 96 48 82 L48 20 C48 17 46 15 43 15 C41 15 39 17 39 20 L39 82 C39 96 30 106 17 106 C12 106 8 102 8 92Z" fill="#000080"/>
+    <text x="190" y="58" fill="#000080" font-family="Audiowide, Segoe UI, Arial, sans-serif" font-size="50" font-weight="700">DEVON</text>
+    <text x="194" y="94" fill="#000000" font-family="Audiowide, Segoe UI, Arial, sans-serif" font-size="18" letter-spacing="7">Systems</text>
+  </g>
+</svg>
