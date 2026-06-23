@@ -1,0 +1,8 @@
+[admin]
+    password = battery
+    actions = SET
+    instcmds = ALL
+
+[monitor]
+    password = battery
+    upsmon master

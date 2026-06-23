@@ -19,6 +19,14 @@ UninstPage instfiles
 Section "Install"
   SetRegView 64
   SetShellVarContext all
+
+  ; Kill any running instances before overwriting files
+  ExecWait 'taskkill /F /IM BatteryPowerManager.exe' $0
+  ExecWait 'taskkill /F /IM BatteryPowerManagerConsole.exe' $0
+  ExecWait 'taskkill /F /IM usbhid-ups.exe' $0
+  ExecWait 'taskkill /F /IM upsd.exe' $0
+  Sleep 1000
+
   RMDir /r "$INSTDIR"
   SetOutPath "$INSTDIR"
   File /r "dist\self-contained-installer\BatteryPowerManager\*"
@@ -49,14 +57,23 @@ Section "Install"
 
   WriteUninstaller "$INSTDIR\Uninstall.exe"
 
+  ; Start NUT backend and wait until upsd is ready (max 15s)
   ExecShell "open" "powershell.exe" '-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "$INSTDIR\Start-BatteryBackend.ps1"'
-  Sleep 3000
+  ExecWait 'powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "for ($i=0;$i -lt 15;$i++) { if (Test-NetConnection -ComputerName 127.0.0.1 -Port 3493 -InformationLevel Quiet -WarningAction SilentlyContinue) { exit 0 }; Start-Sleep 1 }; exit 1"' $0
   ExecShell "open" "$INSTDIR\BatteryPowerManager.exe" "--tray"
 SectionEnd
 
 Section "Uninstall"
   SetRegView 64
   SetShellVarContext all
+
+  ; Stop all running processes before cleanup
+  ExecWait 'taskkill /F /IM BatteryPowerManager.exe' $0
+  ExecWait 'taskkill /F /IM BatteryPowerManagerConsole.exe' $0
+  ExecWait 'taskkill /F /IM usbhid-ups.exe' $0
+  ExecWait 'taskkill /F /IM upsd.exe' $0
+  Sleep 1000
+
   DeleteRegValue HKLM "Software\Microsoft\Windows\CurrentVersion\Run" "BatteryPowerManagerBackend"
   DeleteRegValue HKLM "Software\Microsoft\Windows\CurrentVersion\Run" "BatteryPowerManager"
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\BatteryPowerManager"

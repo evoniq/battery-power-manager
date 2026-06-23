@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  release:
+    types: [published]
 
 jobs:
   test:
@@ -18,3 +20,54 @@ jobs:
         run: uv sync --extra test
       - name: Run tests
         run: uv run pytest -q
+
+  build-windows:
+    runs-on: windows-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install NSIS
+        run: choco install nsis --no-progress -y
+
+      - name: Download NUT for Windows
+        shell: pwsh
+        run: |
+          $nutVersion = "2.8.2"
+          $url = "https://github.com/networkupstools/nut/releases/download/v${nutVersion}/nut-${nutVersion}-Windows-x86_64.zip"
+          Write-Host "Downloading NUT $nutVersion..."
+          Invoke-WebRequest $url -OutFile nut-windows.zip
+          Expand-Archive nut-windows.zip -DestinationPath nut -Force
+          # Make sure EcoFlow config files are in place
+          $etcDir = "nut\etc"
+          New-Item -ItemType Directory -Force -Path $etcDir | Out-Null
+          if (-not (Test-Path "$etcDir\ups.conf")) {
+            Copy-Item "installer\nut-config\ups.conf" "$etcDir\" -ErrorAction SilentlyContinue
+          }
+          if (-not (Test-Path "$etcDir\upsd.conf")) {
+            Copy-Item "installer\nut-config\upsd.conf" "$etcDir\" -ErrorAction SilentlyContinue
+          }
+          if (-not (Test-Path "$etcDir\upsd.users")) {
+            Copy-Item "installer\nut-config\upsd.users" "$etcDir\" -ErrorAction SilentlyContinue
+          }
+
+      - name: Build
+        shell: pwsh
+        run: .\build.ps1 -NutDir nut
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BatteryPowerManagerSetup
+          path: dist\BatteryPowerManagerSetup.exe
+          if-no-files-found: error
+
+      - name: Upload to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist\BatteryPowerManagerSetup.exe
