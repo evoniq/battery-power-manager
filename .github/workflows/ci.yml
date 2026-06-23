@@ -34,7 +34,7 @@ jobs:
       - name: Install NSIS
         run: choco install nsis --no-progress -y
 
-      - name: Download NUT for Windows
+      - name: Download and extract NUT for Windows
         shell: pwsh
         run: |
           $url = "https://github.com/networkupstools/nut/releases/download/v2.8.5/NUT-for-Windows-x86_64-RELEASE-2.8.5-1-fixNSS.7z"
@@ -42,16 +42,15 @@ jobs:
           Invoke-WebRequest $url -OutFile nut-windows.7z
           # 7-Zip is pre-installed on GitHub Windows runners
           & "C:\Program Files\7-Zip\7z.exe" x nut-windows.7z -onut-extracted -y | Out-Null
-          # Find the server directory and restructure to expected layout
-          $serverDir = Get-ChildItem -Recurse -Directory -Filter "x86_64-w64-mingw32-nut-server" -Path nut-extracted | Select-Object -First 1
-          if (-not $serverDir) { throw "x86_64-w64-mingw32-nut-server not found in archive" }
-          $nutRoot = $serverDir.Parent.FullName
+          # Archive root is NUT-for-Windows-*\mingw64 — flatten to nut\mingw64
+          $mingw = Get-ChildItem -Recurse -Directory -Filter "mingw64" -Path nut-extracted | Select-Object -First 1
+          if (-not $mingw) { throw "mingw64 not found in archive" }
           New-Item -ItemType Directory -Force -Path "nut" | Out-Null
-          Copy-Item -Recurse -Force "$nutRoot\*" "nut\"
-          Write-Host "NUT structure:"
-          Get-ChildItem nut -Recurse -Depth 2 | Select-Object FullName | Select-Object -First 20
+          Copy-Item -Recurse -Force "$($mingw.FullName)" "nut\mingw64"
+          Write-Host "NUT binaries:"
+          Get-ChildItem "nut\mingw64\sbin" -Filter "*.exe" | Select-Object -ExpandProperty Name
           # Copy EcoFlow config into etc/
-          $etcDir = "nut\etc"
+          $etcDir = "nut\mingw64\etc"
           New-Item -ItemType Directory -Force -Path $etcDir | Out-Null
           foreach ($f in @("ups.conf","upsd.conf","upsd.users")) {
             $src = "installer\nut-config\$f"

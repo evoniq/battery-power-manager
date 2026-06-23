@@ -49,7 +49,7 @@ def _resolve_upsc_path(upsc_path: str) -> str:
     if upsc_path != "upsc":
         return upsc_path
     executable_dir = Path(sys.executable).resolve().parent
-    bundled = executable_dir / "nut" / "x86_64-w64-mingw32-nut-server" / "bin" / "upsc.exe"
+    bundled = executable_dir / "nut" / "mingw64" / "bin" / "upsc.exe"
     if bundled.exists():
         return str(bundled)
     return upsc_path

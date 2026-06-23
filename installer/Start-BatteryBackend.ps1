@@ -1,9 +1,9 @@
 $ErrorActionPreference = 'SilentlyContinue'
 
-$root = Split-Path -Parent $MyInvocation.MyCommand.Path
-$server = Join-Path $root 'nut\x86_64-w64-mingw32-nut-server'
-$nutRoot = Join-Path $root 'nut'
-$logDir = Join-Path $env:ProgramData 'Battery Power Manager\logs'
+$root    = Split-Path -Parent $MyInvocation.MyCommand.Path
+$server  = Join-Path $root 'nut\mingw64'
+$nutRoot = Join-Path $root 'nut\mingw64'
+$logDir  = Join-Path $env:ProgramData 'Battery Power Manager\logs'
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 
 function Write-Log($msg) {
@@ -32,8 +32,7 @@ if (-not (Test-Path $server)) {
     exit 1
 }
 
-# NUT for Windows resolves etc/ relative to the parent folder containing
-# x86_64-w64-mingw32-nut-server. Do not start from the server/sbin directory.
+# NUT resolves etc/ relative to mingw64 root (working directory).
 Start-IfMissing 'usbhid-ups' (Join-Path $server 'sbin\usbhid-ups.exe') '-a nutdev1' $nutRoot
 Start-Sleep -Seconds 2
 Start-IfMissing 'upsd'       (Join-Path $server 'sbin\upsd.exe')       ''           $nutRoot
