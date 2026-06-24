@@ -34,46 +34,6 @@ jobs:
       - name: Install NSIS
         run: choco install nsis --no-progress -y
 
-      - name: Generate wizard sidebar BMP for MUI2
-        shell: pwsh
-        run: |
-          uv run python - << 'PYEOF'
-          from PIL import Image, ImageDraw, ImageFont
-          import struct, os
-
-          W, H = 164, 314
-          img = Image.new("RGB", (W, H), (30, 30, 30))
-          draw = ImageDraw.Draw(img)
-
-          # Gradient-like stripe
-          for y in range(H):
-              t = y / H
-              r = int(30 + t * 20)
-              g = int(30 + t * 20)
-              b = int(50 + t * 40)
-              draw.line([(0, y), (W, y)], fill=(r, g, b))
-
-          # Accent bar at bottom
-          draw.rectangle([(0, H-6), (W, H)], fill=(0, 120, 212))
-
-          # Text
-          try:
-              font = ImageFont.truetype("C:/Windows/Fonts/segoeui.ttf", 15)
-              font_sm = ImageFont.truetype("C:/Windows/Fonts/segoeui.ttf", 11)
-          except:
-              font = ImageFont.load_default()
-              font_sm = font
-
-          draw.text((16, 180), "Battery Power", fill=(255,255,255), font=font)
-          draw.text((16, 200), "Manager", fill=(255,255,255), font=font)
-          draw.text((16, 228), "Devon Systems", fill=(160,160,160), font=font_sm)
-
-          # Save as 24-bit BMP (NSIS MUI2 requirement)
-          img.save("installer/assets/wizard_sidebar.bmp")
-          print("Sidebar BMP created")
-          PYEOF
-          uv run python -c "from PIL import Image; print('PIL ok')"
-
       - name: Download and extract NUT for Windows
         shell: pwsh
         run: |
@@ -81,7 +41,6 @@ jobs:
           Write-Host "Downloading NUT for Windows 2.8.5..."
           Invoke-WebRequest $url -OutFile nut-windows.7z
           & "C:\Program Files\7-Zip\7z.exe" x nut-windows.7z -onut-extracted -y | Out-Null
-          # Archive contains NUT-for-Windows-*/x86_64-w64-mingw32-nut-server
           $serverDir = Get-ChildItem -Recurse -Directory -Filter "x86_64-w64-mingw32-nut-server" -Path nut-extracted | Select-Object -First 1
           if (-not $serverDir) { throw "x86_64-w64-mingw32-nut-server not found in archive" }
           $nutParent = $serverDir.Parent.FullName
@@ -89,7 +48,6 @@ jobs:
           Copy-Item -Recurse -Force "$nutParent\*" "nut\"
           Write-Host "NUT binaries:"
           Get-ChildItem "nut\x86_64-w64-mingw32-nut-server\sbin" -Filter "*.exe" | Select-Object -ExpandProperty Name
-          # Copy EcoFlow config into etc/
           $etcDir = "nut\x86_64-w64-mingw32-nut-server\etc"
           New-Item -ItemType Directory -Force -Path $etcDir | Out-Null
           foreach ($f in @("ups.conf","upsd.conf","upsd.users")) {
