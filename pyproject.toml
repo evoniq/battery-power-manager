@@ -8,7 +8,7 @@ dependencies = []
 [project.optional-dependencies]
 tray = ["pystray>=0.19", "pillow>=10.0"]
 serial = ["pyserial>=3.5"]
-build = ["pyinstaller>=6.0"]
+build = ["pyinstaller>=6.0", "pillow>=10.0"]
 test = ["pytest>=8.0"]
 
 [project.scripts]

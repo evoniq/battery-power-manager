@@ -1,8 +1,8 @@
 $ErrorActionPreference = 'SilentlyContinue'
 
 $root    = Split-Path -Parent $MyInvocation.MyCommand.Path
-$server  = Join-Path $root 'nut\mingw64'
-$nutRoot = Join-Path $root 'nut\mingw64'
+$server  = Join-Path $root 'nut\x86_64-w64-mingw32-nut-server'
+$nutRoot = Join-Path $root 'nut'
 $logDir  = Join-Path $env:ProgramData 'Battery Power Manager\logs'
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 
@@ -32,10 +32,12 @@ if (-not (Test-Path $server)) {
     exit 1
 }
 
-# NUT resolves etc/ relative to mingw64 root (working directory).
+# usbhid-ups must start first and connect to USB device before upsd starts
 Start-IfMissing 'usbhid-ups' (Join-Path $server 'sbin\usbhid-ups.exe') '-a nutdev1' $nutRoot
-Start-Sleep -Seconds 2
-Start-IfMissing 'upsd'       (Join-Path $server 'sbin\upsd.exe')       ''           $nutRoot
+Start-Sleep -Seconds 3
+
+# Then start upsd which connects to the driver socket
+Start-IfMissing 'upsd' (Join-Path $server 'sbin\upsd.exe') '' $nutRoot
 
 # Wait until upsd is listening on port 3493 (max 15 seconds)
 $ready = $false
