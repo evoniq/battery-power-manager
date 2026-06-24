@@ -1,6 +1,8 @@
 !define APPNAME "Battery Power Manager"
 !define COMPANY "Devon Systems"
-!define VERSION "0.2.0"
+!ifndef VERSION
+  !define VERSION "0.2.0"
+!endif
 
 Name "${APPNAME}"
 OutFile "dist\BatteryPowerManagerSetup.exe"
