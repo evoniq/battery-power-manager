@@ -10,22 +10,23 @@ function Write-Log($msg) {
     "$ts  $msg" | Out-File -FilePath (Join-Path $logDir 'backend.log') -Append -Encoding utf8
 }
 
-# Spawn a process fully detached from this script via the WMI provider.
-# Win32_Process.Create parents the new process to WmiPrvSE, so it survives
-# this launcher (and the installer/scheduled-task) exiting — unlike
-# Start-Process children, which Windows tears down with the parent.
+# Hidden startup info: SW_HIDE so the console apps run with no visible window.
+$startup = ([WMIClass]"Win32_ProcessStartup").CreateInstance()
+$startup.ShowWindow = 0  # SW_HIDE
+$wmiProc = [WMIClass]"Win32_Process"
+
+# Spawn fully detached AND hidden. Win32_Process.Create parents the process to
+# WmiPrvSE so it survives this launcher (and the installer) exiting, and the
+# SW_HIDE startup info keeps the console window invisible.
 function Start-Detached($name, $exe, $cmdline, $workdir) {
     if (Get-Process -Name $name -ErrorAction SilentlyContinue) {
-        Write-Log "$name already running"; return $true
+        Write-Log "$name already running"; return
     }
-    if (-not (Test-Path $exe)) { Write-Log "ERROR: $exe not found"; return $false }
-    Write-Log "Starting $name (detached)..."
-    $res = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{
-        CommandLine      = $cmdline
-        CurrentDirectory = $workdir
-    }
-    if ($res.ReturnValue -ne 0) { Write-Log "ERROR: failed to start $name (rv=$($res.ReturnValue))"; return $false }
-    return $true
+    if (-not (Test-Path $exe)) { Write-Log "ERROR: $exe not found"; return }
+    Write-Log "Starting $name (detached, hidden)..."
+    $r = $wmiProc.Create($cmdline, $workdir, $startup)
+    if ($r.ReturnValue -ne 0) { Write-Log "ERROR: $name failed (rv=$($r.ReturnValue))" }
+    else { Write-Log "$name started pid=$($r.ProcessId)" }
 }
 
 if (-not (Test-Path $mingw)) { Write-Log "ERROR: NUT missing: $mingw"; exit 1 }
