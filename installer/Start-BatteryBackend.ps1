@@ -1,8 +1,7 @@
 $ErrorActionPreference = 'SilentlyContinue'
 
 $root    = Split-Path -Parent $MyInvocation.MyCommand.Path
-$server  = Join-Path $root 'nut\mingw64'
-$nutRoot = Join-Path $root 'nut\mingw64'
+$mingw   = Join-Path $root 'nut\mingw64'
 $logDir  = Join-Path $env:ProgramData 'Battery Power Manager\logs'
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 
@@ -23,12 +22,13 @@ function Start-IfMissing($name, $exe, $args, $workdir) {
         -RedirectStandardError  (Join-Path $logDir "$name.err.log")
 }
 
-if (-not (Test-Path $server)) { Write-Log "ERROR: NUT missing: $server"; exit 1 }
+if (-not (Test-Path $mingw)) { Write-Log "ERROR: NUT missing: $mingw"; exit 1 }
 
-# usbhid-ups must start first (3s) before upsd connects to its socket
-Start-IfMissing 'usbhid-ups' (Join-Path $server 'sbin\usbhid-ups.exe') '-a nutdev1' $nutRoot
+# NUT for Windows mingw64 build: drivers in bin\, daemons in sbin\.
+# Working directory = mingw64 so etc\ups.conf is resolved.
+Start-IfMissing 'usbhid-ups' (Join-Path $mingw 'bin\usbhid-ups.exe') '-a nutdev1' $mingw
 Start-Sleep -Seconds 3
-Start-IfMissing 'upsd' (Join-Path $server 'sbin\upsd.exe') '' $nutRoot
+Start-IfMissing 'upsd' (Join-Path $mingw 'sbin\upsd.exe') '' $mingw
 
 # Wait until upsd is listening (max 15s)
 $ready = $false

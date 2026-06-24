@@ -109,7 +109,6 @@ Section "Battery Power Manager" SecMain
 
   ExecShell "open" "powershell.exe" \
     '-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "$INSTDIR\Start-BatteryBackend.ps1"'
-  ExecWait 'powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "for($i=0;$i-lt 15;$i++){if(Test-NetConnection 127.0.0.1 -Port 3493 -InformationLevel Quiet -WarningAction SilentlyContinue){exit 0};Start-Sleep 1};exit 1"' $0
 SectionEnd
 
 ; ── Uninstall section ─────────────────────────────────────────────────────────
