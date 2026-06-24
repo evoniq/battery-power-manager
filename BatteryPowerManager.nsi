@@ -74,12 +74,15 @@ Section "Battery Power Manager" SecMain
   File "installer\Start-BatteryBackend.ps1"
 
   WriteRegStr HKLM "${REGKEY}" "InstallDir" "$INSTDIR"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Run" \
-    "BatteryPowerManagerBackend" \
-    'powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "$INSTDIR\Start-BatteryBackend.ps1"'
+  ; Tray app starts at login (per-user GUI)
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Run" \
     "BatteryPowerManager" \
     '"$INSTDIR\BatteryPowerManager.exe" --tray'
+
+  ; NUT backend runs as a Scheduled Task at logon with highest privileges.
+  ; This detaches it from the installer's job object so it keeps running
+  ; after the installer closes (the old registry-Run approach got killed).
+  nsExec::ExecToLog 'schtasks /create /f /tn "BatteryPowerManagerBackend" /sc onlogon /rl highest /tr "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"$INSTDIR\Start-BatteryBackend.ps1\""'
 
   WriteRegStr   HKLM "${UNINST_KEY}" "DisplayName"     "${APPNAME}"
   WriteRegStr   HKLM "${UNINST_KEY}" "DisplayVersion"  "${VERSION}"
@@ -107,8 +110,9 @@ Section "Battery Power Manager" SecMain
 
   WriteUninstaller "$INSTDIR\Uninstall.exe"
 
-  ExecShell "open" "powershell.exe" \
-    '-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "$INSTDIR\Start-BatteryBackend.ps1"'
+  ; Trigger the backend task now via Task Scheduler — runs detached from the
+  ; installer, so the NUT processes survive after this installer exits.
+  nsExec::ExecToLog 'schtasks /run /tn "BatteryPowerManagerBackend"'
 SectionEnd
 
 ; ── Uninstall section ─────────────────────────────────────────────────────────
@@ -122,7 +126,7 @@ Section "Uninstall"
   ExecWait 'taskkill /F /IM upsd.exe'                       $0
   Sleep 1000
 
-  DeleteRegValue HKLM "Software\Microsoft\Windows\CurrentVersion\Run" "BatteryPowerManagerBackend"
+  nsExec::ExecToLog 'schtasks /delete /f /tn "BatteryPowerManagerBackend"'
   DeleteRegValue HKLM "Software\Microsoft\Windows\CurrentVersion\Run" "BatteryPowerManager"
   DeleteRegKey   HKLM "${UNINST_KEY}"
   DeleteRegKey   HKLM "${REGKEY}"

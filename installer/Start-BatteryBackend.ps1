@@ -10,25 +10,31 @@ function Write-Log($msg) {
     "$ts  $msg" | Out-File -FilePath (Join-Path $logDir 'backend.log') -Append -Encoding utf8
 }
 
-function Start-IfMissing($name, $exe, $args, $workdir) {
+# Spawn a process fully detached from this script via the WMI provider.
+# Win32_Process.Create parents the new process to WmiPrvSE, so it survives
+# this launcher (and the installer/scheduled-task) exiting — unlike
+# Start-Process children, which Windows tears down with the parent.
+function Start-Detached($name, $exe, $cmdline, $workdir) {
     if (Get-Process -Name $name -ErrorAction SilentlyContinue) {
-        Write-Log "$name already running"; return
+        Write-Log "$name already running"; return $true
     }
-    if (-not (Test-Path $exe)) { Write-Log "ERROR: $exe not found"; return }
-    Write-Log "Starting $name..."
-    Start-Process -FilePath $exe -ArgumentList $args -WorkingDirectory $workdir `
-        -WindowStyle Hidden `
-        -RedirectStandardOutput (Join-Path $logDir "$name.out.log") `
-        -RedirectStandardError  (Join-Path $logDir "$name.err.log")
+    if (-not (Test-Path $exe)) { Write-Log "ERROR: $exe not found"; return $false }
+    Write-Log "Starting $name (detached)..."
+    $res = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{
+        CommandLine      = $cmdline
+        CurrentDirectory = $workdir
+    }
+    if ($res.ReturnValue -ne 0) { Write-Log "ERROR: failed to start $name (rv=$($res.ReturnValue))"; return $false }
+    return $true
 }
 
 if (-not (Test-Path $mingw)) { Write-Log "ERROR: NUT missing: $mingw"; exit 1 }
 
 # NUT for Windows mingw64 build: drivers in bin\, daemons in sbin\.
-# Working directory = mingw64 so etc\ups.conf is resolved.
-Start-IfMissing 'usbhid-ups' (Join-Path $mingw 'bin\usbhid-ups.exe') '-a nutdev1' $mingw
+# CurrentDirectory = mingw64 so etc\ups.conf is resolved.
+Start-Detached 'usbhid-ups' "$mingw\bin\usbhid-ups.exe" "`"$mingw\bin\usbhid-ups.exe`" -a nutdev1" $mingw
 Start-Sleep -Seconds 3
-Start-IfMissing 'upsd' (Join-Path $mingw 'sbin\upsd.exe') '' $mingw
+Start-Detached 'upsd' "$mingw\sbin\upsd.exe" "`"$mingw\sbin\upsd.exe`"" $mingw
 
 # Wait until upsd is listening (max 15s)
 $ready = $false
