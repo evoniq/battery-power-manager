@@ -3,7 +3,7 @@
 # Requirements: Python + uv, PyInstaller, NSIS, NUT Windows binaries
 
 param(
-    [string]$NutDir = "nut",          # path to NUT Windows binaries folder
+    [string]$NutDir = "nut",
     [string]$Version = "0.2.0"
 )
 
@@ -30,11 +30,11 @@ uv run pyinstaller `
     --onedir `
     --noconsole `
     --name BatteryPowerManager `
-    --icon installer\assets\battery_power_manager.ico `
+    --icon "installer\assets\battery_power_manager.ico" `
     --add-data "src\ecoflow_tray\assets\*;ecoflow_tray\assets" `
     --distpath "$Dist" `
     --noconfirm `
-    src\ecoflow_tray\cli.py
+    "src\ecoflow_tray\cli.py"
 if ($LASTEXITCODE -ne 0) { throw "PyInstaller (GUI) failed" }
 
 # --- 4. PyInstaller - Console diagnostic tool ---
@@ -43,12 +43,11 @@ uv run pyinstaller `
     --onedir `
     --console `
     --name BatteryPowerManagerConsole `
-    --icon installer\assets\battery_power_manager.ico `
+    --icon "installer\assets\battery_power_manager.ico" `
     --distpath "$Root\dist\_console_tmp" `
     --noconfirm `
-    src\ecoflow_tray\cli.py
+    "src\ecoflow_tray\cli.py"
 if ($LASTEXITCODE -ne 0) { throw "PyInstaller (console) failed" }
-# Move console exe into the main BatteryPowerManager folder so NSIS packs one dir
 Copy-Item "$Root\dist\_console_tmp\BatteryPowerManagerConsole\BatteryPowerManagerConsole.exe" `
     "$Dist\BatteryPowerManager\" -Force
 
@@ -58,7 +57,6 @@ $NutSource = if ([System.IO.Path]::IsPathRooted($NutDir)) { $NutDir } else { Joi
 if (-not (Test-Path $NutSource)) {
     Write-Warning "NUT directory not found at: $NutSource"
     Write-Warning "Download NUT for Windows from https://github.com/networkupstools/nut/releases"
-    Write-Warning "Expected structure: $NutSource\x86_64-w64-mingw32-nut-server\sbin\upsc.exe"
 } else {
     Copy-Item -Recurse -Force $NutSource "$Dist\nut"
     Write-Host "  NUT binaries copied from $NutSource"
@@ -70,15 +68,23 @@ Copy-Item "installer\assets\battery_power_manager.ico" "$Dist\"
 Copy-Item "installer\assets\battery_power_manager.png" "$Dist\"
 
 # --- 7. Build NSIS installer ---
-$Makensis = Get-Command makensis -ErrorAction SilentlyContinue
-if ($Makensis) {
-    Write-Host "`n[6/6] Building NSIS installer..." -ForegroundColor Yellow
-    makensis /DVERSION=$Version BatteryPowerManager.nsi
+$MakensisExe = $null
+foreach ($candidate in @(
+    "makensis",
+    "C:\Program Files (x86)\NSIS\makensis.exe",
+    "C:\Program Files\NSIS\makensis.exe"
+)) {
+    $cmd = Get-Command $candidate -ErrorAction SilentlyContinue
+    if ($cmd) { $MakensisExe = $cmd.Source; break }
+}
+
+if ($MakensisExe) {
+    Write-Host "`n[6/6] Building NSIS installer with: $MakensisExe" -ForegroundColor Yellow
+    & $MakensisExe /DVERSION=$Version BatteryPowerManager.nsi
     if ($LASTEXITCODE -ne 0) { throw "NSIS build failed" }
     Write-Host "`nInstaller: dist\BatteryPowerManagerSetup.exe" -ForegroundColor Green
 } else {
-    Write-Warning "makensis not found — skipping installer. Install NSIS from https://nsis.sourceforge.io"
-    Write-Host "dist\self-contained-installer\ is ready for manual NSIS build." -ForegroundColor Yellow
+    throw "makensis not found. Install NSIS from https://nsis.sourceforge.io"
 }
 
 Write-Host "`nBuild complete!" -ForegroundColor Green
