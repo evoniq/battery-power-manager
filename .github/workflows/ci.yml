@@ -41,20 +41,16 @@ jobs:
           Write-Host "Downloading NUT for Windows 2.8.5..."
           Invoke-WebRequest $url -OutFile nut-windows.7z
           & "C:\Program Files\7-Zip\7z.exe" x nut-windows.7z -onut-extracted -y | Out-Null
-          $serverDir = Get-ChildItem -Recurse -Directory -Filter "x86_64-w64-mingw32-nut-server" -Path nut-extracted | Select-Object -First 1
-          if (-not $serverDir) { throw "x86_64-w64-mingw32-nut-server not found in archive" }
-          $nutParent = $serverDir.Parent.FullName
+          $mingw = Get-ChildItem -Recurse -Directory -Filter "mingw64" -Path nut-extracted | Select-Object -First 1
+          if (-not $mingw) { throw "mingw64 not found in NUT archive" }
           New-Item -ItemType Directory -Force -Path "nut" | Out-Null
-          Copy-Item -Recurse -Force "$nutParent\*" "nut\"
-          Write-Host "NUT binaries:"
-          Get-ChildItem "nut\x86_64-w64-mingw32-nut-server\sbin" -Filter "*.exe" | Select-Object -ExpandProperty Name
-          $etcDir = "nut\x86_64-w64-mingw32-nut-server\etc"
+          Copy-Item -Recurse -Force "$($mingw.FullName)" "nut\mingw64"
+          Write-Host "NUT sbin:"; Get-ChildItem "nut\mingw64\sbin" -Filter "*.exe" | Select-Object -ExpandProperty Name
+          $etcDir = "nut\mingw64\etc"
           New-Item -ItemType Directory -Force -Path $etcDir | Out-Null
           foreach ($f in @("ups.conf","upsd.conf","upsd.users")) {
             $src = "installer\nut-config\$f"
-            if ((Test-Path $src) -and (-not (Test-Path "$etcDir\$f"))) {
-              Copy-Item $src "$etcDir\"
-            }
+            if ((Test-Path $src) -and (-not (Test-Path "$etcDir\$f"))) { Copy-Item $src "$etcDir\" }
           }
 
       - name: Build

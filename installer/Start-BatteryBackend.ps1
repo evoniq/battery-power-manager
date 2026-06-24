@@ -1,8 +1,8 @@
 $ErrorActionPreference = 'SilentlyContinue'
 
 $root    = Split-Path -Parent $MyInvocation.MyCommand.Path
-$server  = Join-Path $root 'nut\x86_64-w64-mingw32-nut-server'
-$nutRoot = Join-Path $root 'nut'
+$server  = Join-Path $root 'nut\mingw64'
+$nutRoot = Join-Path $root 'nut\mingw64'
 $logDir  = Join-Path $env:ProgramData 'Battery Power Manager\logs'
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 
@@ -13,13 +13,9 @@ function Write-Log($msg) {
 
 function Start-IfMissing($name, $exe, $args, $workdir) {
     if (Get-Process -Name $name -ErrorAction SilentlyContinue) {
-        Write-Log "$name already running"
-        return
+        Write-Log "$name already running"; return
     }
-    if (-not (Test-Path $exe)) {
-        Write-Log "ERROR: $exe not found"
-        return
-    }
+    if (-not (Test-Path $exe)) { Write-Log "ERROR: $exe not found"; return }
     Write-Log "Starting $name..."
     Start-Process -FilePath $exe -ArgumentList $args -WorkingDirectory $workdir `
         -WindowStyle Hidden `
@@ -27,29 +23,19 @@ function Start-IfMissing($name, $exe, $args, $workdir) {
         -RedirectStandardError  (Join-Path $logDir "$name.err.log")
 }
 
-if (-not (Test-Path $server)) {
-    Write-Log "ERROR: NUT directory missing: $server"
-    exit 1
-}
+if (-not (Test-Path $server)) { Write-Log "ERROR: NUT missing: $server"; exit 1 }
 
-# usbhid-ups must start first and connect to USB device before upsd starts
+# usbhid-ups must start first (3s) before upsd connects to its socket
 Start-IfMissing 'usbhid-ups' (Join-Path $server 'sbin\usbhid-ups.exe') '-a nutdev1' $nutRoot
 Start-Sleep -Seconds 3
-
-# Then start upsd which connects to the driver socket
 Start-IfMissing 'upsd' (Join-Path $server 'sbin\upsd.exe') '' $nutRoot
 
-# Wait until upsd is listening on port 3493 (max 15 seconds)
+# Wait until upsd is listening (max 15s)
 $ready = $false
 for ($i = 0; $i -lt 15; $i++) {
-    $conn = Test-NetConnection -ComputerName 127.0.0.1 -Port 3493 `
-        -InformationLevel Quiet -WarningAction SilentlyContinue
-    if ($conn) { $ready = $true; break }
+    if (Test-NetConnection -ComputerName 127.0.0.1 -Port 3493 -InformationLevel Quiet -WarningAction SilentlyContinue) {
+        $ready = $true; break
+    }
     Start-Sleep -Seconds 1
 }
-
-if ($ready) {
-    Write-Log "NUT backend ready on port 3493"
-} else {
-    Write-Log "WARNING: upsd did not respond on port 3493 after 15s"
-}
+if ($ready) { Write-Log "NUT ready on port 3493" } else { Write-Log "WARNING: upsd timeout" }
