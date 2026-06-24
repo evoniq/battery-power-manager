@@ -11,7 +11,7 @@ def test_nut_values_map_to_telemetry():
     assert t.connected is True
     assert t.device_name == "EF-UPS-RIVER 3 Plus"
     assert t.soc_percent == 88
-    assert t.runtime_remaining_minutes == 7200
+    assert t.runtime_remaining_minutes == 120  # 7200 s / 60
     assert t.temperature_c == 29
     assert t.status == "charging"
 
@@ -30,7 +30,7 @@ def test_ecoflow_river3_plus_power_manager_live_shape():
     assert t.connected is True
     assert t.device_name == "EF-UPS-RIVER 3 Plus"
     assert t.soc_percent == 100
-    assert round(t.runtime_remaining_minutes or 0, 1) == 2559.0
+    assert round(t.runtime_remaining_minutes or 0, 1) == 42.6  # 2559 s / 60
     assert t.output_watts is None
     assert t.status == "online"
 

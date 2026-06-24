@@ -95,11 +95,10 @@ def _telemetry_from_nut(data: dict[str, str]) -> Telemetry:
         status = status_raw.lower()
 
     runtime = _num(data, "battery.runtime")
-    # EcoFlow RIVER 3 Plus via the bundled ECOFLOW HID NUT driver exposes
-    # battery.runtime in minutes, despite the generic NUT convention being
-    # seconds. Do not divide this value: with little/no load, values like 2320
-    # correctly mean multi-day runtime, not 38 minutes.
-    runtime_minutes = runtime
+    # battery.runtime follows the standard NUT convention: seconds remaining.
+    # Convert to minutes for the UI. Example: 149940 s = 2499 min = 41.6 h
+    # = 1.7 days, matching the EcoFlow RIVER 3 Plus on-device estimate.
+    runtime_minutes = runtime / 60.0 if runtime is not None else None
     model = data.get("device.model") or data.get("ups.model") or "EcoFlow UPS"
     return Telemetry(
         source="nut",
