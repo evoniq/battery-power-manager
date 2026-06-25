@@ -72,6 +72,7 @@ Section "Battery Power Manager" SecMain
   File "dist\self-contained-installer\battery_power_manager.ico"
   File "dist\self-contained-installer\battery_power_manager.png"
   File "installer\Start-BatteryBackend.ps1"
+  File "installer\Register-BackendTask.ps1"
 
   WriteRegStr HKLM "${REGKEY}" "InstallDir" "$INSTDIR"
   ; Tray app starts at login (per-user GUI)
@@ -79,10 +80,10 @@ Section "Battery Power Manager" SecMain
     "BatteryPowerManager" \
     '"$INSTDIR\BatteryPowerManager.exe" --tray'
 
-  ; NUT backend runs as a Scheduled Task at logon with highest privileges.
-  ; This detaches it from the installer's job object so it keeps running
-  ; after the installer closes (the old registry-Run approach got killed).
-  nsExec::ExecToLog 'schtasks /create /f /tn "BatteryPowerManagerBackend" /sc onlogon /rl highest /tr "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"$INSTDIR\Start-BatteryBackend.ps1\""'
+  ; NUT backend runs as a Scheduled Task at logon (delayed 30s so it doesn't
+  ; contend with WiFi / desktop init at boot), highest privileges, detached
+  ; from the installer so it survives the installer closing. The register
+  ; script also starts it immediately so there's no wait after install.
 
   WriteRegStr   HKLM "${UNINST_KEY}" "DisplayName"     "${APPNAME}"
   WriteRegStr   HKLM "${UNINST_KEY}" "DisplayVersion"  "${VERSION}"
@@ -110,9 +111,9 @@ Section "Battery Power Manager" SecMain
 
   WriteUninstaller "$INSTDIR\Uninstall.exe"
 
-  ; Trigger the backend task now via Task Scheduler — runs detached from the
-  ; installer, so the NUT processes survive after this installer exits.
-  nsExec::ExecToLog 'schtasks /run /tn "BatteryPowerManagerBackend"'
+  ; Register the delayed logon task and start the backend now (detached from
+  ; the installer, so the NUT processes survive after this installer exits).
+  nsExec::ExecToLog 'powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "$INSTDIR\Register-BackendTask.ps1"'
 SectionEnd
 
 ; ── Uninstall section ─────────────────────────────────────────────────────────

@@ -37,12 +37,15 @@ Start-Detached 'usbhid-ups' "$mingw\bin\usbhid-ups.exe" "`"$mingw\bin\usbhid-ups
 Start-Sleep -Seconds 3
 Start-Detached 'upsd' "$mingw\sbin\upsd.exe" "`"$mingw\sbin\upsd.exe`"" $mingw
 
-# Wait until upsd is listening (max 15s)
+# Wait until upsd is listening (max 15s). Use a lightweight TcpClient probe
+# instead of Test-NetConnection, which is heavy and slow at logon time.
 $ready = $false
 for ($i = 0; $i -lt 15; $i++) {
-    if (Test-NetConnection -ComputerName 127.0.0.1 -Port 3493 -InformationLevel Quiet -WarningAction SilentlyContinue) {
+    try {
+        $c = New-Object System.Net.Sockets.TcpClient
+        $c.Connect('127.0.0.1', 3493)
+        $c.Close()
         $ready = $true; break
-    }
-    Start-Sleep -Seconds 1
+    } catch { Start-Sleep -Seconds 1 }
 }
 if ($ready) { Write-Log "NUT ready on port 3493" } else { Write-Log "WARNING: upsd timeout" }
