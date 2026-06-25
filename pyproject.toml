@@ -1,6 +1,6 @@
 [project]
 name = "ecoflow-tray"
-version = "0.1.0"
+version = "0.2.1"
 description = "Portable Windows tray monitor for EcoFlow DELTA telemetry"
 requires-python = ">=3.11"
 dependencies = []
